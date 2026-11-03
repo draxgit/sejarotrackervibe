@@ -1,7 +1,7 @@
 // Седжаро трекер: работа без интернета.
 // Файлы приложения кэшируются при установке; при каждом открытии с интернетом
 // кэш тихо обновляется, так что новая версия подхватится со следующего запуска.
-const CACHE = "sejaro-v1";
+const CACHE = "sejaro-v2";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
