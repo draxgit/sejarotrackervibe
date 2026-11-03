@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Седжаро">
+<meta name="theme-color" content="#EDF2F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C1518" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Седжаро трекер</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow column with three tabs — injections, body measurements, device exchange. */
+:root{
+  --bg:#EDF2F2; --surface:#FFFFFF; --ink:#13242A; --muted:#5A6F75; --line:#D2DDDF;
+  --accent:#0A7A67; --accent-ink:#FFFFFF; --accent-soft:#D3ECE6;
+  --warn:#A9590A; --warn-soft:#F7E7D2; --used:#C7D2D4;
+  --f-display:"Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-body:"Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0C1518; --surface:#132226; --ink:#E2EEEF; --muted:#8EA4AA; --line:#23373C;
+  --accent:#3CC6AC; --accent-ink:#06211B; --accent-soft:#12372F;
+  --warn:#F0A54E; --warn-soft:#3A2915; --used:#2A3E43; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0C1518; --surface:#132226; --ink:#E2EEEF; --muted:#8EA4AA; --line:#23373C;
+  --accent:#3CC6AC; --accent-ink:#06211B; --accent-soft:#12372F;
+  --warn:#F0A54E; --warn-soft:#3A2915; --used:#2A3E43; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:560px;margin:0 auto;padding-block:24px 48px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:18px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:-.01em;margin:0}
+h1 small{display:block;font-family:var(--f-body);font-weight:500;font-size:13px;color:var(--muted);letter-spacing:0;margin-top:2px}
+h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:16px}
+.view{display:flex;flex-direction:column;gap:18px}
+
+/* tabs */
+.tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.tabs a{flex:1;text-align:center;padding:8px 6px;border-radius:9px;color:var(--muted);text-decoration:none;font-weight:500;font-size:14px;min-height:40px;display:flex;align-items:center;justify-content:center}
+.tabs a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* status */
+.big{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.big .count{font-family:var(--f-display);font-weight:700;font-size:56px;line-height:.9;letter-spacing:-.03em}
+.big .of{font-size:15px;color:var(--muted);padding-bottom:4px}
+.big .of b{color:var(--ink);font-weight:600}
+.dial{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;border-radius:10px;background:var(--accent-soft)}
+.dial .clicks{font-family:var(--f-display);font-weight:700;font-size:26px;color:var(--accent);line-height:1}
+.dial .txt{font-size:14px;min-width:0;flex:1 1 200px}
+.dial .txt b{font-weight:600}
+.dial.warn{background:var(--warn-soft)}
+.dial.warn .clicks{color:var(--warn)}
+
+/* pen */
+.pen{display:flex;align-items:center;height:46px}
+.pen .cap{width:26px;height:30px;border:2px solid var(--line);border-right:none;border-radius:10px 0 0 10px;background:var(--bg)}
+.pen .body{flex:1;min-width:0;height:46px;border:2px solid var(--line);border-radius:6px;display:flex;gap:3px;padding:5px;background:var(--bg)}
+.cell{flex:1;border-radius:3px;background:var(--accent)}
+.cell.used{background:repeating-linear-gradient(135deg,var(--used) 0 4px,transparent 4px 8px)}
+.cell.next{outline:2px solid var(--ink);outline-offset:2px}
+.pen .knob{width:16px;height:34px;border:2px solid var(--line);border-left:none;border-radius:0 4px 4px 0;
+  background:repeating-linear-gradient(90deg,var(--line) 0 2px,var(--bg) 2px 4px)}
+.ticks{display:flex;gap:3px;padding:0 23px 0 33px;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.ticks span{flex:1;text-align:center}
+.pen-cap{font-size:12px;color:var(--muted);margin-top:-8px}
+
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;margin:0}
+.facts div{min-width:0}
+.facts dt{font-size:12px;color:var(--muted)}
+.facts dd{margin:2px 0 0;font-weight:600}
+.facts dd .sub{display:block;font-weight:400;font-size:13px;color:var(--muted)}
+@media (max-width:380px){.facts{grid-template-columns:1fr}}
+
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+
+/* forms */
+.action{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.field{display:flex;flex-direction:column;gap:4px;flex:1 1 150px;min-width:0}
+.field label{font-size:12px;color:var(--muted)}
+input[type=date],input[type=number],input[type=text],select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+textarea{min-height:90px;font-family:var(--f-mono);font-size:12px;resize:vertical}
+button,.btn{font:inherit;cursor:pointer;border-radius:10px;min-height:44px;padding:10px 16px;border:1px solid transparent;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink);font-weight:600;flex:1 1 180px;align-self:flex-end}
+.primary:hover{filter:brightness(1.06)}
+.ghost{background:transparent;color:var(--ink);border-color:var(--line);font-size:14px}
+.ghost:hover{border-color:var(--muted)}
+.ghost.quiet{color:var(--muted)}
+.ghost.armed,.mini.armed{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.msg{font-size:13px;color:var(--warn);margin:0}
+.ok{font-size:13px;color:var(--accent);margin:0}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap}
+.row-btns > *{flex:1 1 160px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+
+/* lists */
+.hist{display:flex;flex-direction:column;gap:18px}
+.group h3{font-size:14px;font-weight:600;margin:0 0 6px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.group h3 span{font-weight:400;color:var(--muted);font-size:13px}
+.group ol{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.group li{display:grid;grid-template-columns:2.2em 1fr auto auto;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.group li .n{font-family:var(--f-mono);color:var(--muted);font-size:13px}
+.group li .mg{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.blist li{grid-template-columns:minmax(0,1fr) auto}
+.blist .vals{font-family:var(--f-mono);font-size:13px;color:var(--muted);display:block}
+.mini{min-height:32px;padding:4px 10px;font-size:13px;background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px}
+.empty-note{color:var(--muted);font-size:14px;margin:0}
+
+/* body metrics */
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.metric{border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;text-align:left;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:2px;cursor:pointer;min-height:0}
+.metric[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.metric .k{font-size:12px;color:var(--muted)}
+.metric .v{font-family:var(--f-display);font-weight:700;font-size:22px;line-height:1.1}
+.metric .v small{font-family:var(--f-body);font-weight:500;font-size:13px;color:var(--muted)}
+.metric .d{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.chart{width:100%;overflow:hidden}
+.chart svg{display:block;width:100%;height:auto}
+.chart text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+
+details{border-top:1px solid var(--line);padding-top:14px}
+summary{cursor:pointer;font-size:14px;color:var(--muted);list-style-position:inside}
+.settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+.foot{font-size:12px;color:var(--muted);text-align:center;margin:0}
+.lead{margin:0;color:var(--muted)}
+.loading{color:var(--muted);padding:40px 0;text-align:center}
+.steps{margin:0;padding-left:20px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:4px}
+@media (prefers-reduced-motion: no-preference){ .cell.next{animation:blink 2.4s ease-in-out infinite} }
+@keyframes blink{50%{outline-color:transparent}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Седжаро<small id="sub">трекер уколов</small></h1>
+  </header>
+
+  <nav class="tabs" aria-label="Разделы">
+    <a href="#shots" id="tab-shots">Уколы</a>
+    <a href="#body" id="tab-body">Вес и замеры</a>
+    <a href="#sync" id="tab-sync">Обмен</a>
+  </nav>
+
+  <p class="loading" id="loading">Загружаю записи…</p>
+  <p class="msg" id="netnote" hidden></p>
+
+  <!-- ===================== УКОЛЫ ===================== -->
+  <div class="view" id="view-shots" hidden>
+    <section class="panel" id="onboard" hidden>
+      <h2>Текущая ручка</h2>
+      <p class="lead">Укажите дозировку и когда сделали первый укол из ручки, которой колетесь сейчас. Если не помните дату точно, поставьте примерную — потом можно поправить в истории. Если записи уже есть на другом устройстве, перенесите их во вкладке «Обмен».</p>
+      <div class="settings" style="margin-top:0">
+        <div class="field"><label for="ob-pen">Дозировка ручки</label><select id="ob-pen"></select></div>
+        <div class="field"><label for="ob-dose">Моя доза (по назначению)</label><select id="ob-dose"></select></div>
+        <div class="field"><label for="ob-date">Первый укол из этой ручки</label><input type="date" id="ob-date"></div>
+        <div class="field"><label for="ob-count">Сколько уколов уже сделано</label><input type="number" id="ob-count" min="1" max="40" value="1"></div>
+      </div>
+      <p class="hint" id="ob-hint"></p>
+      <p class="msg" id="ob-err" hidden></p>
+      <button class="primary" id="ob-go" type="button">Начать отслеживать</button>
+    </section>
+
+    <section class="panel" id="status" hidden>
+      <div class="big">
+        <span class="count num" id="left">–</span>
+        <span class="of"><span id="left-word">доз</span> по <b id="dose-mg">5 мг</b> осталось<br>в ручке №<b id="penno">1</b> (<span id="pen-mg">10 мг</span>)</span>
+      </div>
+      <div class="dial" id="dial"><span class="clicks num" id="clicks">30</span><span class="txt" id="dial-txt"></span></div>
+      <div>
+        <div class="pen" aria-hidden="true"><div class="cap"></div><div class="body" id="cells"></div><div class="knob"></div></div>
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+      </div>
+      <div class="pen-cap" id="pencap"></div>
+      <dl class="facts">
+        <div><dt>Начали ручку</dt><dd id="f-start">–</dd></div>
+        <div><dt>Следующий укол</dt><dd id="f-next">–</dd></div>
+        <div><dt>Последний укол</dt><dd id="f-last">–</dd></div>
+        <div><dt>Новая ручка понадобится</dt><dd id="f-newpen">–</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel" id="act" hidden>
+      <h2>Отметить укол</h2>
+      <div class="action">
+        <div class="field"><label for="shot-date">Дата</label><input type="date" id="shot-date"></div>
+        <button class="primary" id="shot-go" type="button">Отметить укол</button>
+      </div>
+      <p class="msg" id="shot-msg" hidden></p>
+      <div class="row-btns"><button class="ghost quiet" id="newpen-go" type="button">Укол из новой ручки</button></div>
+    </section>
+
+    <section class="panel" id="history" hidden>
+      <h2>История уколов</h2>
+      <div class="hist" id="hist"></div>
+      <details>
+        <summary>Дозировка и настройки</summary>
+        <div class="settings">
+          <div class="field"><label for="s-pen">Дозировка ручки</label><select id="s-pen"></select></div>
+          <div class="field"><label for="s-dose">Моя доза (по назначению)</label><select id="s-dose"></select></div>
+          <div class="field"><label for="s-clicks">Щелчков на полную дозу ручки</label><input type="number" id="s-clicks" min="1" max="200"></div>
+          <div class="field"><label for="s-full">Полных доз в ручке</label><input type="number" id="s-full" min="1" max="20"></div>
+          <div class="field"><label for="s-int">Дней между уколами</label><input type="number" id="s-int" min="1" max="30"></div>
+        </div>
+        <p class="hint" id="s-hint" style="margin-top:10px"></p>
+        <p class="msg" id="s-err" hidden></p>
+        <div class="row-btns" style="margin-top:14px"><button class="ghost quiet" id="reset" type="button">Удалить все записи об уколах</button></div>
+      </details>
+    </section>
+  </div>
+
+  <!-- ===================== ВЕС И ЗАМЕРЫ ===================== -->
+  <div class="view" id="view-body" hidden>
+    <section class="panel" id="b-summary">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline">
+        <h2>Последние значения</h2><span class="hint" id="b-since"></span>
+      </div>
+      <div class="metrics" id="b-metrics"></div>
+      <div class="chart" id="b-chart"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Новый замер</h2>
+      <div class="field"><label for="b-date">Дата</label><input type="date" id="b-date"></div>
+      <div class="grid2">
+        <div class="field"><label for="b-w">Вес, кг</label><input type="text" inputmode="decimal" id="b-w" placeholder="напр. 92,4" autocomplete="off"></div>
+        <div class="field"><label for="b-waist">Талия, см</label><input type="text" inputmode="decimal" id="b-waist" autocomplete="off"></div>
+        <div class="field"><label for="b-hips">Бёдра, см</label><input type="text" inputmode="decimal" id="b-hips" autocomplete="off"></div>
+        <div class="field"><label for="b-chest">Грудь, см</label><input type="text" inputmode="decimal" id="b-chest" autocomplete="off"></div>
+      </div>
+      <p class="hint">Можно заполнить только вес. Если на эту дату уже есть замер, новые значения добавятся к нему.</p>
+      <p class="msg" id="b-msg" hidden></p>
+      <button class="primary" id="b-go" type="button" style="align-self:stretch">Сохранить замер</button>
+    </section>
+
+    <section class="panel">
+      <h2>История замеров</h2>
+      <div class="group blist" id="b-hist"></div>
+    </section>
+  </div>
+
+  <!-- ===================== ОБМЕН ===================== -->
+  <div class="view" id="view-sync" hidden>
+    <section class="panel">
+      <h2>Перенести записи на другое устройство</h2>
+      <ol class="steps">
+        <li>Здесь сохраните файл или скопируйте записи текстом.</li>
+        <li>Передайте его на другое устройство: мессенджером, почтой, кабелем.</li>
+        <li>Там откройте «Обмен» и загрузите файл или вставьте текст.</li>
+      </ol>
+      <p class="hint">Записи объединяются: новые добавятся, удалённые удалятся, ничего не задвоится. Обменивайтесь в обе стороны, чтобы на обоих устройствах было одно и то же.</p>
+      <div class="row-btns">
+        <button class="ghost" id="x-save" type="button">Сохранить файл</button>
+        <button class="ghost" id="x-copy" type="button">Скопировать текстом</button>
+      </div>
+      <textarea id="x-out" readonly hidden aria-label="Записи текстом"></textarea>
+      <p class="ok" id="x-out-msg" hidden></p>
+    </section>
+
+    <section class="panel">
+      <h2>Загрузить записи с другого устройства</h2>
+      <div class="field"><label for="x-file">Файл (.json)</label><input type="file" id="x-file" accept=".json,application/json,text/plain"></div>
+      <div class="field"><label for="x-in">или вставьте текст</label><textarea id="x-in" placeholder='{"app":"sejaro-tracker", …}'></textarea></div>
+      <button class="primary" id="x-merge" type="button" style="align-self:stretch">Объединить записи</button>
+      <p class="msg" id="x-err" hidden></p>
+      <p class="ok" id="x-ok" hidden></p>
+    </section>
+
+    <section class="panel" id="x-offline">
+      <h2 id="x-off-h">Офлайн-версия</h2>
+      <p class="lead" id="x-off-txt"></p>
+      <div class="row-btns" id="x-off-btns"></div>
+      <p class="msg" id="x-off-err" hidden></p>
+    </section>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var LS_KEY = "sejaro-tracker-v1";
+  var ONLINE_URL = "https://claude.ai/artifact/MrrByP3ncTMUwVShjTU4N7";
+  var MG = [2.5,5,7.5,10,12.5,15];
+  var IS_ARTIFACT = !!(window.claude && typeof window.claude.use === "function");
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ---------- даты (строки YYYY-MM-DD, считаем в днях) ---------- */
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function today(){ var d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function toDays(s){ var p=s.split("-").map(Number); return Math.round(Date.UTC(p[0],p[1]-1,p[2])/864e5); }
+  function fromDays(n){ var d=new Date(n*864e5); return d.getUTCFullYear()+"-"+pad(d.getUTCMonth()+1)+"-"+pad(d.getUTCDate()); }
+  function addDays(s,n){ return fromDays(toDays(s)+n); }
+  function dt(s,o){ return new Date(toDays(s)*864e5).toLocaleDateString("ru-RU",Object.assign({timeZone:"UTC"},o)); }
+  function fmt(s){ return dt(s,{day:"numeric",month:"short",weekday:"short"}); }
+  function fmtShort(s){ return dt(s,{day:"numeric",month:"short"}); }
+  function fmtLong(s){ return dt(s,{day:"numeric",month:"long",year:"numeric"}); }
+  function plural(n,f){ n=Math.abs(n); var a=n%10,b=n%100; return a===1&&b!==11?f[0]:(a>=2&&a<=4&&(b<10||b>=20)?f[1]:f[2]); }
+  var DAYS=["день","дня","дней"], SHOTS=["укол","укола","уколов"], DOSES=["доза","дозы","доз"], CLICKS=["щелчок","щелчка","щелчков"], MEAS=["замер","замера","замеров"];
+  function rel(s){
+    var d=toDays(s)-toDays(today());
+    if(d===0) return "сегодня"; if(d===1) return "завтра"; if(d===-1) return "вчера";
+    return d>0 ? "через "+d+" "+plural(d,DAYS) : Math.abs(d)+" "+plural(d,DAYS)+" назад";
+  }
+  function nf(n,max){ return Number(n).toLocaleString("ru-RU",{maximumFractionDigits:max==null?1:max}); }
+  function mg(n){ return nf(n,2)+" мг"; }
+  function uid(p){ return p+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+  function byDate(a,b){ return a.date<b.date?-1:a.date>b.date?1:(a.id<b.id?-1:a.id>b.id?1:0); }
+  function esc(t){ return String(t).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  function isDate(s){ return typeof s==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(s); }
+  function pos(x){ return typeof x==="number"&&isFinite(x)&&x>0; }
+
+  /* ---------- состояние ----------
+     Остаток ручки считается в мг: fullDoses × penMg, каждый укол списывает свою дозу.
+     deleted — id удалённых записей, чтобы удаление переживало обмен между устройствами. */
+  var METRICS=[
+    {k:"w",name:"Вес",unit:"кг",min:20,max:400},
+    {k:"waist",name:"Талия",unit:"см",min:30,max:250},
+    {k:"hips",name:"Бёдра",unit:"см",min:30,max:250},
+    {k:"chest",name:"Грудь",unit:"см",min:30,max:250}
+  ];
+  function blank(){ return {v:3,penMg:10,doseMg:5,clicksFull:60,fullDoses:4,intervalDays:7,settingsAt:0,pens:[],shots:[],body:[],deleted:[]}; }
+  function normalize(o){
+    var s=blank(); if(!o||typeof o!=="object") return s;
+    ["penMg","doseMg","clicksFull","fullDoses","intervalDays"].forEach(function(k){ if(pos(o[k])) s[k]=o[k]; });
+    if(typeof o.settingsAt==="number") s.settingsAt=o.settingsAt;
+    if(Array.isArray(o.pens)) s.pens=o.pens.filter(function(p){return p&&typeof p.id==="string"&&isDate(p.opened);})
+      .map(function(p){return {id:p.id,opened:p.opened,mg:pos(p.mg)?p.mg:s.penMg,full:pos(p.full)?p.full:s.fullDoses};});
+    if(Array.isArray(o.shots)) s.shots=o.shots.filter(function(x){return x&&typeof x.id==="string"&&isDate(x.date)&&typeof x.pen==="string";})
+      .map(function(x){return {id:x.id,date:x.date,pen:x.pen,mg:pos(x.mg)?x.mg:s.doseMg};});
+    if(Array.isArray(o.body)) s.body=o.body.filter(function(r){return r&&typeof r.id==="string"&&isDate(r.date);})
+      .map(function(r){ var b={id:r.id,date:r.date}; METRICS.forEach(function(m){ b[m.k]=pos(r[m.k])?r[m.k]:null; }); return b; })
+      .filter(function(r){ return METRICS.some(function(m){return r[m.k]!=null;}); });
+    if(Array.isArray(o.deleted)) s.deleted=o.deleted.filter(function(x){return typeof x==="string";});
+    return s;
+  }
+  function tomb(s,id){ if(s.deleted.indexOf(id)<0) s.deleted.push(id); }
+
+  /* ---------- объединение записей с другого устройства ---------- */
+  function penKey(s,p){ var f=s.shots.filter(function(x){return x.pen===p.id;}).sort(byDate)[0]; return (f?f.date:p.opened)+"|"+p.id; }
+  function merge(a,b){
+    var out=normalize(a); b=normalize(b);
+    var del={}; out.deleted.concat(b.deleted).forEach(function(id){ del[id]=1; });
+    out.deleted=Object.keys(del);
+    function un(x,y){ var m={},r=[]; x.concat(y).forEach(function(e){ if(!del[e.id]&&!m[e.id]){ m[e.id]=1; r.push(e); } }); return r; }
+    out.pens=un(out.pens,b.pens);
+    /* один укол на дату: если отметили на обоих устройствах, остаётся одна запись */
+    var byDay={}; out.shots=un(out.shots,b.shots).sort(byDate).filter(function(x){ if(byDay[x.date]) return false; byDay[x.date]=1; return true; });
+    /* замеры на одну дату сливаются в один */
+    var bd={}; un(out.body,b.body).sort(byDate).forEach(function(r){
+      var c=bd[r.date]; if(!c){ bd[r.date]=Object.assign({},r); return; }
+      METRICS.forEach(function(m){ if(c[m.k]==null&&r[m.k]!=null) c[m.k]=r[m.k]; });
+    });
+    out.body=Object.keys(bd).map(function(k){return bd[k];}).sort(byDate);
+    if(b.settingsAt>out.settingsAt){ ["penMg","doseMg","clicksFull","fullDoses","intervalDays","settingsAt"].forEach(function(k){ out[k]=b[k]; }); }
+    /* ручки без уколов (их уколы оказались дублями) убираем; если уколов нет вообще — оставляем последнюю */
+    out.pens.sort(function(p,q){ var x=penKey(out,p),y=penKey(out,q); return x<y?-1:x>y?1:0; });
+    var withShots=out.pens.filter(function(p){ return out.shots.some(function(x){return x.pen===p.id;}); });
+    out.pens=withShots.length?withShots:out.pens.slice(-1);
+    var penIds={}; out.pens.forEach(function(p){ penIds[p.id]=1; });
+    out.shots=out.shots.filter(function(x){ return penIds[x.pen]; });
+    return out;
+  }
+
+  var state=null, mode="local", saveFn=null, ready=false;
+  function lsRead(){ try{ var t=localStorage.getItem(LS_KEY); return t?normalize(JSON.parse(t)):null; }catch(e){ return null; } }
+  function lsWrite(s){ try{ localStorage.setItem(LS_KEY,JSON.stringify(s)); return true; }catch(e){ return false; } }
+  function commit(next){ state=next; render(); lsWrite(next); if(saveFn) saveFn(next); }
+
+  function dosesPerPen(penMg,full,doseMg){ return Math.floor(penMg*full/doseMg+1e-9); }
+
+  function derive(s){
+    var pen=s.pens[s.pens.length-1];
+    var penShots=s.shots.filter(function(x){return x.pen===pen.id;}).sort(byDate);
+    var all=s.shots.slice().sort(byDate);
+    var totalMg=pen.mg*pen.full;
+    var usedMg=penShots.reduce(function(a,x){return a+x.mg;},0);
+    var leftMg=Math.max(0,Math.round((totalMg-usedMg)*1000)/1000);
+    var left=Math.floor(leftMg/s.doseMg+1e-9);
+    var last=all.length?all[all.length-1]:null;
+    var start=penShots.length?penShots[0].date:pen.opened;
+    return {pen:pen,penNo:s.pens.length,used:penShots.length,left:left,leftMg:leftMg,cells:penShots.length+left,
+      last:last,start:start,next:last?addDays(last.date,s.intervalDays):null,newPen:last?addDays(last.date,(left+1)*s.intervalDays):null};
+  }
+
+  /* ---------- вкладки ---------- */
+  var VIEWS=["shots","body","sync"];
+  function currentView(){ var h=(location.hash||"").slice(1); return VIEWS.indexOf(h)>=0?h:"shots"; }
+  window.addEventListener("hashchange",render);
+
+  /* ---------- отрисовка ---------- */
+  function fillSelect(el,val){
+    if(!el.options.length) el.innerHTML=MG.map(function(v){return '<option value="'+v+'">'+mg(v)+"</option>";}).join("");
+    if(!Array.prototype.some.call(el.options,function(o){return Number(o.value)===val;})){ var o=document.createElement("option"); o.value=val; o.textContent=mg(val); el.appendChild(o); }
+    el.value=String(val);
+  }
+
+  function render(){
+    $("loading").hidden=ready;
+    var v=currentView();
+    VIEWS.forEach(function(k){ $("view-"+k).hidden=!ready||k!==v; var t=$("tab-"+k); if(k===v) t.setAttribute("aria-current","page"); else t.removeAttribute("aria-current"); });
+    $("sub").textContent = v==="body"?"вес и замеры":(v==="sync"?"обмен между устройствами":"трекер уколов");
+    if(!ready) return;
+    $("foot").textContent = mode==="db" ? "Онлайн-версия: записи сохраняются в вашем аккаунте Claude и видны только вам."
+      : (IS_ARTIFACT ? "Записи сохраняются только в этом браузере." : "Офлайн-версия: записи хранятся только на этом устройстве, в этом браузере.");
+    if(v==="shots") renderShots();
+    if(v==="body") renderBody();
+    if(v==="sync") renderSync();
+  }
+
+  function renderShots(){
+    var has=state.pens.length>0;
+    $("onboard").hidden=has; $("status").hidden=!has; $("act").hidden=!has; $("history").hidden=!has;
+    if(!has){ obSync(); return; }
+    var s=state, d=derive(s), clk=Math.round(s.clicksFull*s.doseMg/s.penMg*10)/10;
+
+    $("left").textContent=d.left; $("left-word").textContent=plural(d.left,DOSES);
+    $("dose-mg").textContent=mg(s.doseMg); $("penno").textContent=d.penNo; $("pen-mg").textContent=mg(d.pen.mg);
+
+    var dial=$("dial");
+    if(d.pen.mg!==s.penMg){
+      dial.className="dial warn"; $("clicks").textContent="!";
+      $("dial-txt").innerHTML="Текущая ручка — <b>"+esc(mg(d.pen.mg))+"</b>, а в настройках указана "+esc(mg(s.penMg))+". Щелчки для этой ручки: <b>"+esc(nf(s.clicksFull*s.doseMg/d.pen.mg))+"</b> из "+s.clicksFull+".";
+    } else {
+      dial.className="dial"; $("clicks").textContent=nf(clk);
+      $("dial-txt").innerHTML="<b>"+plural(Math.round(clk),CLICKS)+"</b> из "+s.clicksFull+" на укол — "+esc(mg(s.doseMg))+" из ручки "+esc(mg(s.penMg))+(Number.isInteger(clk)?"":". Дробное число щелчков — проверьте дозировку.");
+    }
+
+    var cells="", ticks="";
+    for(var i=0;i<d.cells;i++){
+      cells+='<span class="'+(i<d.used?"cell used":(i===d.used?"cell next":"cell"))+'"></span>'; ticks+="<span>"+(i+1)+"</span>";
+    }
+    $("cells").innerHTML=cells; $("ticks").innerHTML=ticks;
+    var usedMg=Math.round((d.pen.mg*d.pen.full-d.leftMg)*100)/100, tail=d.leftMg-d.left*s.doseMg;
+    $("pencap").textContent="В ручке "+mg(d.pen.mg*d.pen.full)+" ("+d.pen.full+" × "+mg(d.pen.mg)+"). Израсходовано "+mg(usedMg)+", осталось "+mg(d.leftMg)+
+      (tail>0.001?" — остаток "+mg(Math.round(tail*100)/100)+" меньше вашей дозы.":".");
+
+    var age=toDays(today())-toDays(d.start), week=Math.floor(age/7)+1;
+    $("f-start").innerHTML=esc(fmtLong(d.start))+'<span class="sub">'+(age>=0? week+"-я неделя · "+age+" "+plural(age,DAYS)+" в использовании" : "в будущем")+"</span>";
+    if(d.next){
+      var diff=toDays(d.next)-toDays(today());
+      var pill=diff<0?'<span class="pill warn">пропущен</span>':(diff===0?'<span class="pill">сегодня</span>':"");
+      $("f-next").innerHTML=esc(fmt(d.next))+" "+pill+'<span class="sub">'+esc(rel(d.next))+(d.left===0?" · из новой ручки":"")+"</span>";
+      $("f-last").innerHTML=esc(fmt(d.last.date))+'<span class="sub">'+esc(rel(d.last.date))+" · "+esc(mg(d.last.mg))+"</span>";
+      $("f-newpen").innerHTML= d.left===0 ? 'Уже сейчас <span class="pill warn">ручка пустая</span>' :
+        esc(fmt(d.newPen))+'<span class="sub">≈ '+esc(rel(d.newPen))+", если колоть по графику</span>";
+    } else { $("f-next").textContent="—"; $("f-last").textContent="ещё не было"; $("f-newpen").textContent="—"; }
+
+    $("shot-go").textContent = d.left===0 ? "Укол из новой ручки" : "Отметить укол "+mg(s.doseMg);
+    $("newpen-go").hidden = d.left===0;
+
+    fillSelect($("s-pen"),s.penMg); fillSelect($("s-dose"),s.doseMg);
+    $("s-clicks").value=s.clicksFull; $("s-full").value=s.fullDoses; $("s-int").value=s.intervalDays;
+    var per=dosesPerPen(s.penMg,s.fullDoses,s.doseMg);
+    $("s-hint").textContent="Новая ручка "+mg(s.penMg)+" = "+per+" "+plural(per,DOSES)+" по "+mg(s.doseMg)+" ≈ "+Math.round(per*s.intervalDays/7)+" нед. Уже сделанные уколы сохраняют свою дозу.";
+
+    var html="";
+    for(var p=s.pens.length-1;p>=0;p--){
+      var pen=s.pens[p], shots=s.shots.filter(function(x){return x.pen===pen.id;}).sort(byDate);
+      var start=shots.length?shots[0].date:pen.opened;
+      html+='<div class="group"><h3>Ручка №'+(p+1)+" · "+esc(mg(pen.mg))+' <span>начата '+esc(fmtLong(start))+" · "+shots.length+" "+plural(shots.length,SHOTS)+"</span></h3><ol>";
+      if(!shots.length) html+='<li><span class="n"></span><span class="empty-note">уколов пока нет</span><span></span><span></span></li>';
+      for(var j=shots.length-1;j>=0;j--) html+='<li><span class="n">'+(j+1)+"</span><span>"+esc(fmt(shots[j].date))+'</span><span class="mg">'+esc(mg(shots[j].mg))+'</span><button class="mini" type="button" data-del="'+esc(shots[j].id)+'">Удалить</button></li>';
+      html+="</ol></div>";
+    }
+    $("hist").innerHTML=html;
+  }
+
+  /* ----- вес и замеры ----- */
+  var chartMetric="w";
+  function series(k){ return state.body.filter(function(r){return r[k]!=null;}).sort(byDate); }
+  function sgn(x,unit){ var r=Math.round(x*10)/10; if(r===0) return "без изменений"; return (r>0?"+":"−")+nf(Math.abs(r))+" "+unit; }
+
+  function renderBody(){
+    if(!$("b-date").value) $("b-date").value=today();
+    var any=state.body.length>0;
+    var html="";
+    METRICS.forEach(function(m){
+      var sr=series(m.k), last=sr[sr.length-1], prev=sr[sr.length-2], first=sr[0];
+      var d="";
+      if(last&&prev) d=sgn(last[m.k]-prev[m.k],m.unit)+" к прошлому";
+      if(last&&first&&first!==last&&first!==prev) d+=(d?"<br>":"")+sgn(last[m.k]-first[m.k],m.unit)+" с "+esc(fmtShort(first.date));
+      html+='<button type="button" class="metric" data-metric="'+m.k+'" aria-pressed="'+(chartMetric===m.k)+'">'+
+        '<span class="k">'+m.name+(last?" · "+esc(fmtShort(last.date)):"")+'</span>'+
+        '<span class="v">'+(last?nf(last[m.k])+' <small>'+m.unit+"</small>":"—")+"</span>"+
+        '<span class="d">'+(d||(last?"первый замер":"нет данных"))+"</span></button>";
+    });
+    $("b-metrics").innerHTML=html;
+    var n=state.body.length;
+    $("b-since").textContent=any? n+" "+plural(n,MEAS)+" с "+fmtLong(state.body.slice().sort(byDate)[0].date):"";
+    drawChart();
+    var list=state.body.slice().sort(byDate).reverse();
+    $("b-hist").innerHTML= list.length? "<ol>"+list.map(function(r){
+      var vals=METRICS.filter(function(m){return r[m.k]!=null;}).map(function(m){return m.name.toLowerCase()+" "+nf(r[m.k])+" "+m.unit;}).join(" · ");
+      return '<li><span>'+esc(fmt(r.date))+'<span class="vals">'+esc(vals)+'</span></span><button class="mini" type="button" data-bdel="'+esc(r.id)+'">Удалить</button></li>';
+    }).join("")+"</ol>" : '<p class="empty-note">Замеров пока нет. Внесите первый — вес, талию, бёдра или грудь.</p>';
+  }
+
+  function drawChart(){
+    var m=METRICS.filter(function(x){return x.k===chartMetric;})[0], sr=series(m.k), box=$("b-chart");
+    if(sr.length<2){ box.innerHTML='<p class="hint">'+(sr.length? "График появится после второго замера ("+m.name.toLowerCase()+").":"Здесь будет график, когда появятся замеры.")+"</p>"; return; }
+    var W=600,H=220,L=48,R=16,T=14,B=30;
+    var x0=toDays(sr[0].date), x1=toDays(sr[sr.length-1].date), xs=Math.max(1,x1-x0);
+    var vals=sr.map(function(r){return r[m.k];}), lo=Math.min.apply(null,vals), hi=Math.max.apply(null,vals);
+    var padV=Math.max((hi-lo)*0.15, m.k==="w"?0.5:1); lo-=padV; hi+=padV;
+    function X(d){ return L+(toDays(d)-x0)/xs*(W-L-R); }
+    function Y(v){ return T+(hi-v)/(hi-lo)*(H-T-B); }
+    var g="";
+    for(var i=0;i<=3;i++){ var v=lo+(hi-lo)*i/3, y=Y(v);
+      g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/>'+
+         '<text x="'+(L-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end">'+nf(v)+'</text>'; }
+    var pts=sr.map(function(r){return X(r.date).toFixed(1)+","+Y(r[m.k]).toFixed(1);});
+    var area="M"+pts[0]+" L"+pts.join(" L")+" L"+X(sr[sr.length-1].date).toFixed(1)+","+(H-B)+" L"+X(sr[0].date).toFixed(1)+","+(H-B)+" Z";
+    var dots=sr.map(function(r,i){ var last=i===sr.length-1;
+      return '<circle cx="'+X(r.date).toFixed(1)+'" cy="'+Y(r[m.k]).toFixed(1)+'" r="'+(last?5:3)+'" fill="'+(last?"var(--accent)":"var(--surface)")+'" stroke="var(--accent)" stroke-width="2"><title>'+esc(fmtShort(r.date)+": "+nf(r[m.k])+" "+m.unit)+"</title></circle>"; }).join("");
+    var lastR=sr[sr.length-1], lx=X(lastR.date), ly=Y(lastR[m.k]);
+    var lbl='<text x="'+Math.min(lx,W-R).toFixed(1)+'" y="'+Math.max(T+10,ly-10).toFixed(1)+'" text-anchor="end" style="fill:var(--ink);font-weight:600">'+nf(lastR[m.k])+" "+m.unit+"</text>";
+    var xl='<text x="'+L+'" y="'+(H-8)+'" text-anchor="start">'+esc(fmtShort(sr[0].date))+'</text><text x="'+(W-R)+'" y="'+(H-8)+'" text-anchor="end">'+esc(fmtShort(lastR.date))+"</text>";
+    box.innerHTML='<svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="'+esc(m.name)+' по датам">'+g+
+      '<path d="'+area+'" fill="var(--accent-soft)" opacity=".7"/><polyline points="'+pts.join(" ")+'" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'+dots+lbl+xl+"</svg>";
+  }
+
+  function parseNum(el){ var t=el.value.trim().replace(",","."); if(!t) return null; var v=Number(t); return isFinite(v)?v:NaN; }
+  function addBody(){
+    var date=$("b-date").value; if(!date){ showMsg("b-msg","Выберите дату замера."); return; }
+    var rec={}, bad=null, any=false;
+    METRICS.forEach(function(m){ var v=parseNum($("b-"+m.k)); if(v==null) return; if(!(v>=m.min&&v<=m.max)) bad=m; else { rec[m.k]=Math.round(v*10)/10; any=true; } });
+    if(bad){ showMsg("b-msg",bad.name+": введите число от "+bad.min+" до "+bad.max+" "+bad.unit+"."); return; }
+    if(!any){ showMsg("b-msg","Заполните хотя бы одно поле."); return; }
+    var s=normalize(state), ex=s.body.filter(function(r){return r.date===date;})[0];
+    if(ex) Object.assign(ex,rec);
+    else { var r={id:uid("b"),date:date}; METRICS.forEach(function(m){ r[m.k]=rec[m.k]!=null?rec[m.k]:null; }); s.body.push(r); }
+    METRICS.forEach(function(m){ $("b-"+m.k).value=""; });
+    showMsg("b-msg",""); commit(s);
+  }
+
+  /* ----- обмен ----- */
+  function exportText(){ return JSON.stringify({app:"sejaro-tracker",exportedAt:new Date().toISOString(),data:state}); }
+  function exportName(){ return "sejaro-"+today()+".json"; }
+
+  function renderSync(){
+    var box=$("x-off-btns"), txt=$("x-off-txt");
+    if(box.dataset.done) return; box.dataset.done="1";
+    if(IS_ARTIFACT){
+      $("x-off-h").textContent="Офлайн-версия для телефона";
+      txt.textContent="Тот же трекер одним файлом. Работает без интернета, записи хранит в браузере устройства. Скачайте на телефон, откройте в браузере и перенесите туда записи через обмен.";
+      var b=document.createElement("button"); b.type="button"; b.className="ghost"; b.id="x-off-dl"; b.textContent="Скачать офлайн-версию";
+      b.addEventListener("click",downloadOffline); box.appendChild(b);
+    } else {
+      $("x-off-h").textContent="Онлайн-версия";
+      txt.textContent="Это офлайн-версия: записи хранятся только на этом устройстве. Онлайн-версия хранит записи в аккаунте Claude и открывается с любого устройства, где вы вошли.";
+      var a=document.createElement("a"); a.className="btn ghost"; a.href=ONLINE_URL; a.target="_blank"; a.rel="noopener"; a.textContent="Открыть онлайн-версию";
+      box.appendChild(a);
+    }
+  }
+
+  var dlCap; function getDownloads(){ if(!IS_ARTIFACT) return Promise.resolve(null); if(!dlCap) dlCap=window.claude.use("downloads").catch(function(){return null;}); return dlCap; }
+  function saveFile(name,text,errId){
+    showMsg(errId,"");
+    if(!IS_ARTIFACT){
+      try{
+        var url=URL.createObjectURL(new Blob([text],{type:name.endsWith(".html")?"text/html":"application/json"}));
+        var a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); },4000);
+        return Promise.resolve(true);
+      }catch(e){ showMsg(errId,"Браузер не дал сохранить файл. Скопируйте записи текстом."); return Promise.resolve(false); }
+    }
+    return getDownloads().then(function(dl){
+      if(!dl){ showMsg(errId,"Сохранение файлов здесь недоступно. Скопируйте записи текстом."); return false; }
+      return dl.save({filename:name,data:text}).then(function(){ return true; },function(e){
+        if(e&&e.code==="declined") return false;
+        showMsg(errId,"Не получилось сохранить файл. Скопируйте записи текстом."); return false;
+      });
+    });
+  }
+  function downloadOffline(){
+    fetch("sejaro-offline.html").then(function(r){ if(!r.ok) throw 0; return r.text(); })
+      .then(function(t){ return saveFile("sejaro-offline.html",t,"x-off-err"); })
+      .catch(function(){ showMsg("x-off-err","Не удалось загрузить офлайн-версию. Попробуйте ещё раз при стабильном интернете."); });
+  }
+
+  function doMerge(text){
+    showMsg("x-err",""); showOk("x-ok","");
+    var obj; try{ obj=JSON.parse(text); }catch(e){ showMsg("x-err","Не получилось прочитать записи. Скопируйте текст целиком, от { до }."); return; }
+    var data=obj&&obj.app==="sejaro-tracker"?obj.data:obj;
+    if(!data||typeof data!=="object"||!(Array.isArray(data.shots)||Array.isArray(data.body))){ showMsg("x-err","Это не записи трекера Седжаро."); return; }
+    var before=state, next=merge(state,data);
+    function cnt(arr){ return arr.length; }
+    var ds=cnt(next.shots)-cnt(before.shots), db=cnt(next.body)-cnt(before.body);
+    commit(next);
+    $("x-in").value=""; $("x-file").value="";
+    var parts=[];
+    parts.push(ds>0?"уколов добавлено: "+ds:(ds<0?"уколов удалено: "+(-ds):"уколы без изменений"));
+    parts.push(db>0?"замеров добавлено: "+db:(db<0?"замеров удалено: "+(-db):"замеры без изменений"));
+    showOk("x-ok","Готово: "+parts.join(", ")+".");
+  }
+
+  /* ---------- двойное нажатие вместо confirm() ---------- */
+  function armed(btn,label,fn){
+    if(btn.classList.contains("armed")){ clearTimeout(btn._t); btn.classList.remove("armed"); btn.textContent=btn._orig; fn(); return; }
+    btn._orig=btn.textContent; btn.textContent=label; btn.classList.add("armed");
+    btn._t=setTimeout(function(){ btn.classList.remove("armed"); btn.textContent=btn._orig; },4000);
+  }
+  function showMsg(id,t){ var m=$(id); m.textContent=t||""; m.hidden=!t; }
+  function showOk(id,t){ var m=$(id); m.textContent=t||""; m.hidden=!t; }
+
+  /* ---------- действия: уколы ---------- */
+  function newPenFor(s,date){ return {id:uid("p"),opened:date,mg:s.penMg,full:s.fullDoses}; }
+  function addShot(newPen){
+    var date=$("shot-date").value; if(!date){ showMsg("shot-msg","Выберите дату укола."); return; }
+    var s=normalize(state);
+    if(s.shots.some(function(x){return x.date===date;})){ showMsg("shot-msg","На "+fmtLong(date)+" укол уже отмечен."); return; }
+    var d=derive(s), penId=d.pen.id;
+    if(newPen||d.left===0){ var p=newPenFor(s,date); penId=p.id; s.pens.push(p); }
+    s.shots.push({id:uid("s"),date:date,pen:penId,mg:s.doseMg});
+    showMsg("shot-msg",""); $("shot-date").value=today();
+    commit(s);
+  }
+  function delShot(id){
+    var s=normalize(state), shot=s.shots.filter(function(x){return x.id===id;})[0]; if(!shot) return;
+    s.shots=s.shots.filter(function(x){return x.id!==id;}); tomb(s,id);
+    var lastPen=s.pens[s.pens.length-1];
+    if(s.pens.length>1&&lastPen.id===shot.pen&&!s.shots.some(function(x){return x.pen===lastPen.id;})){ s.pens.pop(); tomb(s,lastPen.id); }
+    commit(s);
+  }
+
+  var obTouched=false;
+  function obVals(){ var base=state||blank(); return {penMg:Number($("ob-pen").value)||base.penMg, doseMg:Number($("ob-dose").value)||base.doseMg}; }
+  function obSync(){
+    var base=state||blank();
+    if(!$("ob-pen").options.length){ fillSelect($("ob-pen"),base.penMg); fillSelect($("ob-dose"),base.doseMg); }
+    var dv=$("ob-date").value; if(!dv){ $("ob-date").value=today(); dv=today(); }
+    var v=obVals(), per=dosesPerPen(v.penMg,base.fullDoses,v.doseMg);
+    if(v.doseMg>v.penMg){ showMsg("ob-err","Доза больше дозировки ручки — так одной ручкой не уколоться."); $("ob-hint").textContent=""; return; }
+    showMsg("ob-err","");
+    var weeks=Math.max(1,Math.min(per,Math.floor((toDays(today())-toDays(dv))/base.intervalDays)+1));
+    if(!obTouched) $("ob-count").value=weeks;
+    var n=Math.max(1,Math.min(per,Number($("ob-count").value)||1));
+    $("ob-hint").textContent="Ручка "+mg(v.penMg)+" при дозе "+mg(v.doseMg)+": "+nf(base.clicksFull*v.doseMg/v.penMg)+" из "+base.clicksFull+" щелчков, "+per+" "+plural(per,DOSES)+" в ручке. "+
+      "Будут отмечены "+n+" "+plural(n,SHOTS)+": с "+fmtLong(dv)+" каждые "+base.intervalDays+" "+plural(base.intervalDays,DAYS)+".";
+  }
+  function obGo(){
+    var dv=$("ob-date").value; if(!dv) return;
+    var v=obVals(); if(v.doseMg>v.penMg) return;
+    var s=normalize(state); s.penMg=v.penMg; s.doseMg=v.doseMg; s.settingsAt=Date.now();
+    var per=dosesPerPen(s.penMg,s.fullDoses,s.doseMg), n=Math.max(1,Math.min(per,Number($("ob-count").value)||1));
+    var pen=newPenFor(s,dv); s.pens.forEach(function(p){tomb(s,p.id);}); s.shots.forEach(function(x){tomb(s,x.id);});
+    s.pens=[pen]; s.shots=[];
+    var lim=toDays(today());
+    for(var i=0;i<n;i++){ var d=addDays(dv,i*s.intervalDays); if(toDays(d)>lim&&i>0) break; s.shots.push({id:uid("s"),date:d,pen:pen.id,mg:s.doseMg}); }
+    commit(s);
+  }
+  function setNum(key,el,min,max){
+    var v=Number(el.value); if(!(v>=min&&v<=max)){ el.value=state[key]; return; }
+    if(key!=="penMg"&&key!=="doseMg") v=Math.round(v);
+    if(v===state[key]) return;
+    var s=normalize(state); s[key]=v;
+    if(s.doseMg>s.penMg){ showMsg("s-err","Доза не может быть больше дозировки ручки."); el.value=state[key]; return; }
+    showMsg("s-err",""); s.settingsAt=Date.now();
+    var d=derive(s); if(d.used===0){ d.pen.mg=s.penMg; d.pen.full=s.fullDoses; }
+    commit(s);
+  }
+
+  /* ---------- события ---------- */
+  $("shot-date").value=today();
+  $("shot-go").addEventListener("click",function(){ addShot(false); });
+  $("newpen-go").addEventListener("click",function(){ var d=derive(state); armed(this,"Точно? В текущей ещё "+d.left+" "+plural(d.left,DOSES),function(){ addShot(true); }); });
+  $("hist").addEventListener("click",function(e){ var b=e.target.closest("[data-del]"); if(!b) return; armed(b,"Точно удалить?",function(){ delShot(b.getAttribute("data-del")); }); });
+  $("ob-date").addEventListener("input",obSync);
+  $("ob-pen").addEventListener("change",obSync);
+  $("ob-dose").addEventListener("change",obSync);
+  $("ob-count").addEventListener("input",function(){ obTouched=true; obSync(); });
+  $("ob-go").addEventListener("click",obGo);
+  $("s-pen").addEventListener("change",function(){ setNum("penMg",this,0.1,100); });
+  $("s-dose").addEventListener("change",function(){ setNum("doseMg",this,0.1,100); });
+  $("s-clicks").addEventListener("change",function(){ setNum("clicksFull",this,1,200); });
+  $("s-full").addEventListener("change",function(){ setNum("fullDoses",this,1,20); });
+  $("s-int").addEventListener("change",function(){ setNum("intervalDays",this,1,30); });
+  $("reset").addEventListener("click",function(){
+    armed(this,"Нажмите ещё раз, чтобы удалить",function(){ var s=normalize(state); s.pens.forEach(function(p){tomb(s,p.id);}); s.shots.forEach(function(x){tomb(s,x.id);}); s.pens=[]; s.shots=[]; obTouched=false; $("ob-date").value=today(); commit(s); });
+  });
+
+  $("b-go").addEventListener("click",addBody);
+  $("b-metrics").addEventListener("click",function(e){ var b=e.target.closest("[data-metric]"); if(!b) return; chartMetric=b.getAttribute("data-metric"); renderBody(); });
+  $("b-hist").addEventListener("click",function(e){
+    var b=e.target.closest("[data-bdel]"); if(!b) return;
+    armed(b,"Точно удалить?",function(){ var id=b.getAttribute("data-bdel"), s=normalize(state); s.body=s.body.filter(function(r){return r.id!==id;}); tomb(s,id); commit(s); });
+  });
+
+  $("x-save").addEventListener("click",function(){ saveFile(exportName(),exportText(),"x-err").then(function(ok){ if(ok) showOk("x-out-msg","Файл "+exportName()+" сохранён."); }); });
+  $("x-copy").addEventListener("click",function(){
+    var t=exportText(), out=$("x-out"); out.value=t;
+    function fallback(){ out.hidden=false; out.focus(); out.select(); showOk("x-out-msg","Текст выделен в поле ниже — скопируйте его вручную."); }
+    try{ navigator.clipboard.writeText(t).then(function(){ out.hidden=true; showOk("x-out-msg","Скопировано. Вставьте этот текст на другом устройстве во вкладке «Обмен»."); },fallback); }catch(e){ fallback(); }
+  });
+  $("x-file").addEventListener("change",function(){
+    var f=this.files&&this.files[0]; if(!f) return;
+    var r=new FileReader(); r.onload=function(){ doMerge(String(r.result)); }; r.onerror=function(){ showMsg("x-err","Не удалось прочитать файл."); }; r.readAsText(f);
+  });
+  $("x-merge").addEventListener("click",function(){ var t=$("x-in").value.trim(); if(!t){ showMsg("x-err","Выберите файл или вставьте текст."); return; } doMerge(t); });
+
+  /* ---------- хранилище ---------- */
+  function useLocal(note){
+    mode="local"; saveFn=null; state=lsRead()||blank(); ready=true;
+    if(note){ $("netnote").textContent=note; $("netnote").hidden=false; }
+    render();
+  }
+  async function init(){
+    if(!IS_ARTIFACT){ useLocal(); return; }
+    var res=await Promise.all([window.claude.use("db"),window.claude.use("user")]).catch(function(){return [null,null];});
+    var db=res[0], user=res[1], id=user?await user.id():null;
+    if(!db||!id){ useLocal(); return; }
+    var ref; try{ ref=db.doc("data/users/"+id+"/tracker"); }catch(e){ useLocal(); return; }
+    mode="db";
+    var chain=Promise.resolve();
+    saveFn=function(s){
+      chain=chain.then(function(){ return ref.set(JSON.parse(JSON.stringify(s))); })
+        .catch(function(){ $("netnote").textContent="Не удалось сохранить в аккаунт — запись осталась в этом браузере."; $("netnote").hidden=false; });
+    };
+    var timer=setTimeout(function(){
+      $("netnote").textContent="Хранилище пока не отвечает. Показаны записи из этого браузера.";
+      $("netnote").hidden=false;
+      if(!ready){ state=lsRead()||blank(); ready=true; render(); }
+    },10000);
+    var migrated=false;
+    ref.onSnapshot(function(snap){
+      if(!snap.metadata.fromCache){ clearTimeout(timer); $("netnote").hidden=true; }
+      if(snap.exists){ state=normalize(snap.data()); }
+      else if(!snap.metadata.fromCache&&!migrated){ migrated=true; var local=lsRead(); state=local||blank(); if(local&&(local.pens.length||local.body.length)) saveFn(local); }
+      else if(!state){ state=blank(); }
+      if(snap.exists||!snap.metadata.fromCache) ready=true;
+      render();
+    },function(){ clearTimeout(timer); useLocal("Хранилище аккаунта недоступно. Записи сохраняются в этом браузере."); });
+  }
+
+  if(typeof module!=="undefined"){ module.exports={merge:merge,normalize:normalize,blank:blank}; }
+  render();
+  init();
+})();
+</script>
+
+<script>
+if("serviceWorker" in navigator){ window.addEventListener("load",function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); }); }
+if(navigator.storage&&navigator.storage.persist){ navigator.storage.persist().catch(function(){}); }
+</script>
+</body>
+</html>
